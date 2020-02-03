@@ -140,7 +140,7 @@ type CoreDataSource struct {
 	IDC      string `gorm:"type:varchar(50);not null"`
 	Source   string `gorm:"type:varchar(50);not null"`
 	IP       string `gorm:"type:varchar(200);not null"`
-	Port     int32    `gorm:"type:int(10);not null"`
+	Port     int    `gorm:"type:int(10);not null"`
 	Username string `gorm:"type:varchar(50);not null"`
 	Password string `gorm:"type:varchar(150);not null"`
 	IsQuery  int    `gorm:"type:tinyint(2);not null"` // 0写 1读 2读写
@@ -151,7 +151,15 @@ type CoreGrained struct {
 	Username    string `gorm:"type:varchar(50);not null"`
 	Rule        string `gorm:"type:varchar(10);not null";json:"rule"`
 	Permissions JSON   `gorm:"type:json"`
+	Group       JSON   `gorm:"type:json"`
 }
+
+type CoreRoleGroup struct {
+	ID          uint   `gorm:"primary_key;AUTO_INCREMENT"`
+	Name        string `gorm:"type:varchar(50);not null"`
+	Permissions JSON   `gorm:"type:json"`
+}
+
 
 type CoreQueryOrder struct {
 	ID       uint   `gorm:"primary_key;AUTO_INCREMENT"`
@@ -185,4 +193,5 @@ type CoreAutoTask struct {
 	Table     string `gorm:"type:varchar(50);not null"`
 	Tp        int    `gorm:"type:tinyint(2);not null"` // 0 insert 1 update 2delete
 	Affectrow uint   `gorm:"type:int(50);not null default 0;"`
+	Status    int    `gorm:"type:tinyint(2);not null default 0"` // 0 close 1 on
 }

@@ -142,6 +142,8 @@ func GeneralTable(c echo.Context) (err error) {
 	var s model.CoreDataSource
 	var table string
 	var l []string
+	var highlist []map[string]string
+
 
 	model.DB().Where("source =?", u.Source).First(&s)
 
@@ -165,10 +167,11 @@ func GeneralTable(c echo.Context) (err error) {
 	defer rows.Close()
 	for rows.Next() {
 		rows.Scan(&table)
+		highlist = append(highlist, map[string]string{"vl": table, "meta": "表名"})
 		l = append(l, table)
 	}
 
-	return c.JSON(http.StatusOK, l)
+	return c.JSON(http.StatusOK, map[string]interface{}{"table": l, "highlight": highlist})
 }
 
 func GeneralTableInfo(c echo.Context) (err error) {
@@ -219,7 +222,7 @@ func GeneralSQLTest(c echo.Context) (err error) {
 		Source: &pb.Source{
 			Addr:     s.IP,
 			User:     s.Username,
-			Port:     s.Port,
+			Port:     int32(s.Port),
 			Password: ps,
 		},
 		Execute: false,
@@ -312,6 +315,7 @@ func GeneralFetchUndo(c echo.Context) (err error) {
 	if model.DB().Where("username =? AND work_id =? AND `status` =? ", user, u, 2).First(&undo).RecordNotFound() {
 		return c.JSON(http.StatusOK, "工单状态已更改！无法撤销")
 	}
+	go lib.MessagePush(c, undo.WorkId, 6, "")
 	model.DB().Where("username =? AND work_id =? AND `status` =? ", user, u, 2).Delete(&model.CoreSqlOrder{})
 	return c.JSON(http.StatusOK, "工单已撤销！")
 }

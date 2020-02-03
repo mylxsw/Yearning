@@ -55,8 +55,6 @@ func SuperSaveSetting(c echo.Context) (err error) {
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 
-	ser.FetchAuditRole = u.Juno
-
 	other, _ := json.Marshal(u.Other)
 	message, _ := json.Marshal(u.Message)
 	ldap, _ := json.Marshal(u.Ldap)
@@ -120,7 +118,7 @@ func SuperSaveRoles(c echo.Context) (err error)  {
 	}
 
 	ser.FetchAuditRole = u.Juno
-	audit, err := json.Marshal(u.Juno)
+	audit, _ := json.Marshal(u.Juno)
 	model.DB().Model(model.CoreGlobalConfiguration{}).Where("authorization =?", "global").Updates(&model.CoreGlobalConfiguration{AuditRole: audit})
 
 	return c.JSON(http.StatusOK, "配置信息已保存！")

@@ -74,7 +74,7 @@ func ReferQueryOrder(c echo.Context) (err error) {
 			ExDate:   time.Now().Format("2006-01-02 15:04"),
 		})
 
-		lib.MessagePush(c, work, 6, "")
+		lib.MessagePush(c, work, 7, "")
 
 		return c.JSON(http.StatusOK, "查询工单已提交!")
 	}
@@ -89,14 +89,11 @@ func FetchQueryStatus(c echo.Context) (err error) {
 
 	model.DB().Where("username =?", user).Last(&d)
 
-	export := d.Export
-
 	if lib.TimeDifference(d.ExDate) {
 		model.DB().Model(model.CoreQueryOrder{}).Where("username =?", user).Update(&model.CoreQueryOrder{QueryPer: 3})
-		export = 2
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{"status": d.QueryPer, "export": export, "idc": d.IDC})
+	return c.JSON(http.StatusOK, map[string]interface{}{"status": d.QueryPer, "export": model.GloOther.Export, "idc": d.IDC})
 }
 
 func FetchQueryDatabaseInfo(c echo.Context) (err error) {
@@ -391,8 +388,8 @@ func FetchQueryOrder(c echo.Context) (err error) {
 
 	var order []model.CoreQueryOrder
 
-	whereField := "username LIKE ? "
-
+	user, _ := lib.JwtParse(c)
+	whereField := fmt.Sprintf("username LIKE ?  AND assigned = '%s'",user)
 	dateField := " AND date >= ? AND date <= ?"
 
 	if u.Find.Valve {
@@ -404,8 +401,9 @@ func FetchQueryOrder(c echo.Context) (err error) {
 			model.DB().Model(&model.CoreQueryOrder{}).Where(whereField+dateField, "%"+fmt.Sprintf("%s", u.Find.User)+"%", u.Find.Picker[0], u.Find.Picker[1]).Count(&pg)
 		}
 	} else {
-		model.DB().Order("id desc").Offset(start).Limit(end).Find(&order)
-		model.DB().Model(&model.CoreQueryOrder{}).Count(&pg)
+		model.DB().Where("assigned =?",user).Order("id desc").Offset(start).Limit(end).Find(&order)
+		model.DB().Model(&model.CoreQueryOrder{}).Where("assigned =?",user).Count(&pg)
+
 	}
 	return c.JSON(http.StatusOK, struct {
 		Data []model.CoreQueryOrder `json:"data"`
@@ -419,4 +417,16 @@ func FetchQueryOrder(c echo.Context) (err error) {
 func QueryQuickCancel(c echo.Context) (err error) {
 	model.DB().Model(model.CoreQueryOrder{}).Updates(&model.CoreQueryOrder{QueryPer: 3})
 	return c.JSON(http.StatusOK, "所有查询已取消！")
+}
+
+func QueryDeleteEmptyRecord(c echo.Context) (err error)  {
+	var j []model.CoreQueryOrder
+	model.DB().Select("work_id").Where(`query_per =?`,3).Find(&j)
+	for _,i := range j {
+		var k model.CoreQueryRecord
+		if model.DB().Where("work_id =?",i.WorkId).First(&k).RecordNotFound() {
+			model.DB().Where("work_id =?",i.WorkId).Delete(&model.CoreQueryOrder{})
+		}
+	}
+	return c.JSON(http.StatusOK,"空查询工单已全部清除！")
 }

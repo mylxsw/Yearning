@@ -15,6 +15,7 @@ package lib
 
 import (
 	"Yearning-go/src/model"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
@@ -79,10 +80,18 @@ func LdapConnenct(c echo.Context, l *model.Ldap, user string, pass string, isTes
 	var s string
 
 	ld, err := ldap.Dial("tcp", l.Url)
+
+	if l.Ldaps {
+		if err := ld.StartTLS(&tls.Config{InsecureSkipVerify: true});err != nil {
+			log.Println(err.Error())
+		}
+	}
+
 	if err != nil {
 		c.Logger().Error(err.Error())
 		return false
 	}
+
 	defer ld.Close()
 
 	if ld != nil {
@@ -212,7 +221,7 @@ func QueryMethod(source *model.CoreDataSource, req *model.Queryresults, wordList
 
 	ps := Decrypt(source.Password)
 
-	db, err := sqlx.Connect("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8", source.Username, ps, source.IP, source.Port, req.Basename))
+	db, err := sqlx.Connect("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&readTimeout=%ds", source.Username, ps, source.IP, source.Port, req.Basename,model.GloOther.QueryTimeout))
 	if err != nil {
 		return qd, err
 	}

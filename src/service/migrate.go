@@ -102,6 +102,9 @@ func Migrate() {
 			OscCriticalThreadRunning:       20,
 			OscRecursionMethod:             "processlist",
 			OscCheckInterval:               1,
+			AllowCreatePartition:           false,
+			AllowCreateView:                false,
+			AllowSpecialType: false,
 		}
 
 		other := model.Other{
@@ -170,9 +173,26 @@ func UpdateSoft() {
 	model.DB().AutoMigrate(&model.CoreQueryOrder{})
 	model.DB().AutoMigrate(&model.CoreGroupOrder{})
 	model.DB().AutoMigrate(&model.CoreAutoTask{})
+	model.DB().AutoMigrate(&model.CoreRoleGroup{})
 	fmt.Println("数据已更新!")
 }
 
 func DelCol() {
 	model.DB().Model(&model.CoreQueryOrder{}).DropColumn("source")
+}
+
+func MargeRuleGroup() {
+	fmt.Println("权限迁移…………")
+	var j []model.CoreGrained
+	model.DB().Find(&j)
+	for _, i := range j {
+		model.DB().Create(&model.CoreRoleGroup{
+			Name:        i.Username,
+			Permissions: i.Permissions,
+		})
+		k := []string{i.Username}
+		k1, _ := json.Marshal(k)
+		model.DB().Model(model.CoreGrained{}).Where("username =?",i.Username).Update(&model.CoreGrained{Group: k1})
+	}
+	fmt.Println("权限迁移成功!")
 }
